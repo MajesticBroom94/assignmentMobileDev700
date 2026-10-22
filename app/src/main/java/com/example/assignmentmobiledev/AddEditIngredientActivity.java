@@ -5,22 +5,27 @@ import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import com.google.firebase.auth.FirebaseAuth;
 
+import com.example.assignmentmobiledev.Models.PantryItem;
+import com.example.assignmentmobiledev.Repositories.PantryRepository;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
 
 public class AddEditIngredientActivity extends AppCompatActivity {
 
+    private PantryRepository repository;
+    private String editingItemId;
     private TextInputEditText editName, editQuantity, editExpiry;
     private TextInputLayout layoutName, layoutQuantity;
     private Spinner spinnerUnit;
@@ -34,6 +39,16 @@ public class AddEditIngredientActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_add_edit_ingredient);
 
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+
+        if (auth.getCurrentUser() == null) {
+            finish();
+            return;
+        }
+
+        repository = new PantryRepository();
+
+        // layout views
         editName = findViewById(R.id.editName);
         editQuantity = findViewById(R.id.editQuantity);
         editExpiry = findViewById(R.id.editExpiry);
@@ -45,6 +60,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         Button btnSave = findViewById(R.id.btnSaveIngredient);
 
+        // spinner dropdown values
         ArrayAdapter<CharSequence> unitAdapter =
                 ArrayAdapter.createFromResource(
                         this,
@@ -56,9 +72,50 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         spinnerUnit.setAdapter(unitAdapter);
 
+
+        // button actions
         editExpiry.setOnClickListener(v -> showDatePicker());
 
         btnSave.setOnClickListener(v -> validateForm());
+
+
+        // Updating item already in pantry
+        editingItemId = getIntent().getStringExtra("itemId");
+
+        if (editingItemId != null) {
+
+            TextView title = findViewById(R.id.txtFormTitle);
+            title.setText("Edit Ingredient");
+
+            editName.setText(getIntent().getStringExtra("name"));
+
+            editQuantity.setText(String.valueOf(
+                    getIntent().getDoubleExtra("quantity", 0)
+            ));
+
+            String unit = getIntent().getStringExtra("unit");
+
+            ArrayAdapter adapter = (ArrayAdapter) spinnerUnit.getAdapter();
+
+            int position = adapter.getPosition(unit);
+
+            if (position >= 0) {
+                spinnerUnit.setSelection(position);
+            }
+
+            if (getIntent().hasExtra("expiryDate")) {
+                selectedExpiry.setTimeInMillis(
+                        getIntent().getLongExtra("expiryDate", 0)
+                );
+
+                hasExpiry = true;
+
+                editExpiry.setText(
+                        new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                                .format(selectedExpiry.getTime())
+                );
+            }
+        }
     }
 
     private void showDatePicker() {
@@ -112,10 +169,37 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         String unit = spinnerUnit.getSelectedItem().toString();
 
-        // Form is valid.
-        // Firestore save/update will be implemented next.
+        Date expiryDate = hasExpiry ? selectedExpiry.getTime() : null;
+
+        // item to save instance
+        PantryItem item = new PantryItem(name, quantity, unit, expiryDate);
+
+        // attach id if updating
+        if (editingItemId != null) {
+            item.setId(editingItemId);
+        }
+
+        saveIngredient(item);
     }
+    private void saveIngredient(PantryItem item) {
 
+        Button btnSave = findViewById(R.id.btnSaveIngredient);
+        btnSave.setEnabled(false);
 
+        repository.save(item)
+                .addOnSuccessListener(saved -> {
+                    Toast.makeText(this,
+                            "Ingredient saved",
+                            Toast.LENGTH_SHORT).show();
 
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    btnSave.setEnabled(true);
+
+                    Toast.makeText(this,
+                            "Unable to save ingredient",
+                            Toast.LENGTH_LONG).show();
+                });
+    }
 }
