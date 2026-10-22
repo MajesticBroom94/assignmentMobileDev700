@@ -16,6 +16,7 @@ import com.example.assignmentmobiledev.Models.PantryItem;
 import com.example.assignmentmobiledev.Repositories.PantryRepository;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -179,8 +180,31 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             item.setId(editingItemId);
         }
 
-        saveIngredient(item);
+        // duplicate checking
+        repository.findByName(item.getNormalizedName())
+                .addOnSuccessListener(results -> {
+
+                    for (DocumentSnapshot document : results.getDocuments()) {
+
+                        // Ignore the ingredient currently being edited
+                        if (document.getId().equals(editingItemId)) {
+                            continue;
+                        }
+
+                        layoutName.setError("Ingredient already exists");
+                        return;
+                    }
+
+                    // No duplicates found
+                    saveIngredient(item);
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                "Unable to check ingredient",
+                                Toast.LENGTH_LONG).show()
+                );
     }
+
     private void saveIngredient(PantryItem item) {
 
         Button btnSave = findViewById(R.id.btnSaveIngredient);
