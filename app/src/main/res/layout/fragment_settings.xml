@@ -1,20 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="20dp">
 
     <TextView
-        android:id="@+id/txtTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="My Pantry"
+        android:text="Settings"
         android:textSize="26sp"
-        android:textStyle="bold"
-        android:textColor="#263B2A"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:textStyle="bold" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switchExpiryWarnings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Expiry warnings"
+        android:textSize="16sp"
+        android:checked="true" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Highlight pantry ingredients expiring within the next week."
+        android:textSize="14sp" />
+
+</LinearLayout>
