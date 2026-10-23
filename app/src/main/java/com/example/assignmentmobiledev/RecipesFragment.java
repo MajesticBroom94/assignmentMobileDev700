@@ -1,5 +1,6 @@
 package com.example.assignmentmobiledev;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -65,14 +66,14 @@ public class RecipesFragment extends Fragment {
         canMakeAdapter = new RecipeAdapter(new RecipeAdapter.OnRecipeClickListener() {
             @Override
             public void onRecipeClick(Recipe recipe) {
-                openRecipe(recipe);
+                openRecipe(recipe, true);
             }
         });
 
         almostThereAdapter = new RecipeAdapter(new RecipeAdapter.OnRecipeClickListener() {
             @Override
             public void onRecipeClick(Recipe recipe) {
-                openRecipe(recipe);
+                openRecipe(recipe, false);
             }
         });
 
@@ -186,12 +187,13 @@ public class RecipesFragment extends Fragment {
         ).show();
     }
 
-    private void openRecipe(Recipe recipe) {
+    private void openRecipe(Recipe recipe, boolean canMake) {
 
-        Toast.makeText(
-                requireContext(),
-                recipe.getName(),
-                Toast.LENGTH_SHORT
-        ).show();
+        Intent intent = new Intent(requireContext(), RecipeDetailActivity.class);
+
+        intent.putExtra("recipeId", recipe.getId());
+        intent.putExtra("canMake", canMake);
+
+        startActivity(intent);
     }
 }

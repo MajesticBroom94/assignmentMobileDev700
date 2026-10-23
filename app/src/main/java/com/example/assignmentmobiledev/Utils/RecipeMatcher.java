@@ -93,7 +93,7 @@ public class RecipeMatcher {
         return new RecipeMatchResult(canMake, almostThere);
     }
 
-    private static String singularizeName(String ingredientName) {
+    public static String singularizeName(String ingredientName) {
 
         ingredientName = ingredientName.trim().toLowerCase(Locale.ROOT);
 
@@ -112,7 +112,7 @@ public class RecipeMatcher {
         return ingredientName;
     }
 
-    private static boolean compatibleUnits(String firstUnit, String secondUnit) {
+    public static boolean compatibleUnits(String firstUnit, String secondUnit) {
 
         firstUnit = firstUnit.toLowerCase(Locale.ROOT);
         secondUnit = secondUnit.toLowerCase(Locale.ROOT);
@@ -130,7 +130,7 @@ public class RecipeMatcher {
                 (secondUnit.equals("ml") || secondUnit.equals("l"));
     }
 
-    private static double convertQuantity(double quantity, String unit) {
+    public static double convertQuantity(double quantity, String unit) {
 
         unit = unit.toLowerCase(Locale.ROOT);
 
