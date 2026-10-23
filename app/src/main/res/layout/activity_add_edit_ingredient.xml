@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/addEditRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -60,6 +61,8 @@
             android:id="@+id/spinnerUnit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/spinner_background"
+            android:popupBackground="@drawable/spinner_dropdown_background"
             android:minHeight="48dp" />
 
         <com.google.android.material.textfield.TextInputLayout
