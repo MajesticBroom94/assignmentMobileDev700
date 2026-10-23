@@ -1,15 +1,23 @@
 package com.example.assignmentmobiledev;
 
 import android.app.DatePickerDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
+import com.example.assignmentmobiledev.Utils.RecipeMatcher;
 import com.google.firebase.auth.FirebaseAuth;
 
 import com.example.assignmentmobiledev.Models.PantryItem;
@@ -28,7 +36,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
     private PantryRepository repository;
     private String editingItemId;
     private TextInputEditText editName, editQuantity, editExpiry;
-    private TextInputLayout layoutName, layoutQuantity;
+    private TextInputLayout layoutName, layoutQuantity, layoutExpiry;
     private Spinner spinnerUnit;
 
     private final Calendar selectedExpiry = Calendar.getInstance();
@@ -37,8 +45,22 @@ public class AddEditIngredientActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_add_edit_ingredient);
+
+        View root = findViewById(R.id.addEditRoot);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            v.setPadding(
+                    v.getPaddingLeft(),
+                    bars.top,
+                    v.getPaddingRight(),
+                    v.getPaddingBottom()
+            );
+
+            return insets;
+        });
 
         FirebaseAuth auth = FirebaseAuth.getInstance();
 
@@ -56,6 +78,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         layoutName = findViewById(R.id.layoutName);
         layoutQuantity = findViewById(R.id.layoutQuantity);
+        layoutExpiry = findViewById(R.id.layoutExpiry);
 
         spinnerUnit = findViewById(R.id.spinnerUnit);
 
@@ -120,7 +143,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
     }
 
     private void showDatePicker() {
-        new DatePickerDialog(
+        DatePickerDialog picker= new DatePickerDialog(
                 this,
                 (view, year, month, day) -> {
                     selectedExpiry.set(year, month, day, 0, 0, 0);
@@ -128,17 +151,23 @@ public class AddEditIngredientActivity extends AppCompatActivity {
                     hasExpiry = true;
 
                     SimpleDateFormat format =
-                            new SimpleDateFormat(
-                                    "dd/MM/yyyy",
-                                    Locale.getDefault()
-                            );
+                            new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
                     editExpiry.setText(format.format(selectedExpiry.getTime()));
                 },
                 selectedExpiry.get(Calendar.YEAR),
                 selectedExpiry.get(Calendar.MONTH),
                 selectedExpiry.get(Calendar.DAY_OF_MONTH)
-        ).show();
+        );
+
+        picker.setButton(
+                DialogInterface.BUTTON_NEUTRAL,
+                "Clear", (dialog, which) -> {
+                    hasExpiry = false;
+                    editExpiry.setText("");
+        });
+
+        picker.show();
     }
 
     private void validateForm() {
@@ -172,6 +201,31 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         Date expiryDate = hasExpiry ? selectedExpiry.getTime() : null;
 
+        if (expiryDate != null) {
+            Calendar today = Calendar.getInstance();
+            Calendar expiry = Calendar.getInstance();
+
+            expiry.setTime(expiryDate);
+
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+
+            expiry.set(Calendar.HOUR_OF_DAY, 0);
+            expiry.set(Calendar.MINUTE, 0);
+            expiry.set(Calendar.SECOND, 0);
+            expiry.set(Calendar.MILLISECOND, 0);
+
+            long daysRemaining = (expiry.getTimeInMillis()
+                    - today.getTimeInMillis()) / (24L * 60 * 60 * 1000);
+
+            if (daysRemaining <= 0) {
+                layoutExpiry.setError("Expiry date must be in the future");
+                return;
+            }
+        }
+
         // item to save instance
         PantryItem item = new PantryItem(name, quantity, unit, expiryDate);
 
@@ -180,9 +234,11 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             item.setId(editingItemId);
         }
 
-        // duplicate checking
-        repository.findByName(item.getNormalizedName())
+        // Duplicate checking
+        repository.getAll()
                 .addOnSuccessListener(results -> {
+
+                    String newName = RecipeMatcher.singularizeName(item.getNormalizedName());
 
                     for (DocumentSnapshot document : results.getDocuments()) {
 
@@ -191,8 +247,18 @@ public class AddEditIngredientActivity extends AppCompatActivity {
                             continue;
                         }
 
-                        layoutName.setError("Ingredient already exists");
-                        return;
+                        String existingName = document.getString("normalizedName");
+
+                        if (existingName == null) {
+                            continue;
+                        }
+
+                        existingName = RecipeMatcher.singularizeName(existingName);
+
+                        if (newName.equals(existingName)) {
+                            layoutName.setError("Ingredient with similar name already exists");
+                            return;
+                        }
                     }
 
                     // No duplicates found
@@ -201,9 +267,9 @@ public class AddEditIngredientActivity extends AppCompatActivity {
                 .addOnFailureListener(e ->
                         Toast.makeText(this,
                                 "Unable to check ingredient",
-                                Toast.LENGTH_LONG).show()
-                );
+                                Toast.LENGTH_LONG).show());
     }
+
 
     private void saveIngredient(PantryItem item) {
 
