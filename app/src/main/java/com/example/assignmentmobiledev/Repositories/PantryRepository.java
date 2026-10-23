@@ -41,10 +41,6 @@ public class PantryRepository {
         return pantry.document(itemId).delete();
     }
 
-    public Task<QuerySnapshot> findByName(String normalizedName) {
-        return pantry.whereEqualTo("normalizedName", normalizedName).get();
-    }
-
     public Task<QuerySnapshot> getAll() {
         return pantry.get();
     }

@@ -16,6 +16,7 @@ import java.util.List;
 
 public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeViewHolder> {
 
+    // Pass edit and delete button actions back to fragment.
     public interface OnRecipeClickListener {
         void onRecipeClick(Recipe recipe);
     }
@@ -23,10 +24,12 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
     private final List<Recipe> recipes = new ArrayList<>();
     private final OnRecipeClickListener listener;
 
+    // Initialize the adapter with a listener for edit and delete actions.
     public RecipeAdapter(OnRecipeClickListener listener) {
         this.listener = listener;
     }
 
+    // Replace the displayed pantry items with the latest data.
     public void setRecipes(List<Recipe> updatedRecipes) {
         recipes.clear();
         recipes.addAll(updatedRecipes);
@@ -44,6 +47,7 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
         return new RecipeViewHolder(view);
     }
 
+    // Display ingredient details and assign button click listener.
     @Override
     public void onBindViewHolder(@NonNull RecipeViewHolder holder, int position) {
 
@@ -54,11 +58,10 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
         int count = recipe.getIngredients().size();
 
         holder.txtIngredients.setText(
-                count + (count == 1 ? " required ingredient" : " required ingredients")
+                "Consists of " + count + (count == 1 ? " ingredient" : " ingredients")
         );
 
-        holder.itemView.setOnClickListener(v ->
-                listener.onRecipeClick(recipe));
+        holder.itemView.setOnClickListener(v -> listener.onRecipeClick(recipe));
     }
 
     @Override
@@ -66,6 +69,7 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
         return recipes.size();
     }
 
+    // Store references to the views used by each pantry item.
     static class RecipeViewHolder extends RecyclerView.ViewHolder {
 
         TextView txtName;

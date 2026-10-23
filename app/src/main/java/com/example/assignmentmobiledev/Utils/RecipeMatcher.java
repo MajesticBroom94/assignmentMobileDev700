@@ -12,6 +12,8 @@ import java.util.Locale;
 
 public class RecipeMatcher {
 
+    // Match recipes against pantry ingredients and separate them into
+    // recipes that can be made and recipes missing exactly one ingredient.
     public static RecipeMatchResult getMatchingRecipes(List<PantryItem> pantry, List<Recipe> recipes) {
 
         List<Recipe> canMake = new ArrayList<>();
@@ -23,18 +25,21 @@ public class RecipeMatcher {
             int missingIngredientCount = 0;
             int recipeIngredientsCount = recipe.getIngredients().size();
 
+            // Check each required ingredient against the available pantry items.
             for (RecipeIngredient requiredIngredient : recipe.getIngredients()) {
 
                 boolean ingredientExists = false;
                 boolean quantitySufficient = false;
 
+                // normalize recipe ingredient names
                 String requiredIngredientName = singularizeName(requiredIngredient.getNormalizedName());
 
                 for (PantryItem availableIngredient : pantry) {
 
+                    // normalize pantry ingredient names
                     String availableIngredientName = singularizeName(availableIngredient.getNormalizedName());
 
-                    // Check ingredient name
+                    // Check if ingredient name matches
                     if (!requiredIngredientName.equals(availableIngredientName)) {
                         continue;
                     }
@@ -46,6 +51,8 @@ public class RecipeMatcher {
 
                     ingredientExists = true;
 
+                    // Convert compatible units to a common base before comparing quantities.
+                    // kg->g and l->ml.
                     double availableQuantity = convertQuantity(
                             availableIngredient.getQuantity(),
                             availableIngredient.getUnit()
@@ -56,6 +63,7 @@ public class RecipeMatcher {
                             requiredIngredient.getUnit()
                     );
 
+                    // Check if available quantity is sufficient.
                     if (availableQuantity >= requiredQuantity) {
                         quantitySufficient = true;
                         matchedIngredientCount++;
@@ -71,18 +79,17 @@ public class RecipeMatcher {
 
                 // A recipe cannot qualify for either list if an
                 // existing ingredient has insufficient quantity or is missing 2 or more items.
-                if (ingredientExists && !quantitySufficient || missingIngredientCount >= 2) {
+                if ((ingredientExists && !quantitySufficient) || missingIngredientCount >= 2) {
                     break;
                 }
             }
 
-            // Every required ingredient is available
+            // Every required ingredient is available in sufficient quantity.
             if (matchedIngredientCount == recipeIngredientsCount) {
                 canMake.add(recipe);
             }
 
-            // Exactly one ingredient is missing entirely;
-            // all remaining ingredients have sufficient quantities.
+            // Only one ingredient is missing; all others are sufficient.
             else if (missingIngredientCount == 1 &&
                     matchedIngredientCount == recipeIngredientsCount - 1) {
 
@@ -93,6 +100,7 @@ public class RecipeMatcher {
         return new RecipeMatchResult(canMake, almostThere);
     }
 
+    // Normalize simple plural ingredient names for matching.
     public static String singularizeName(String ingredientName) {
 
         ingredientName = ingredientName.trim().toLowerCase(Locale.ROOT);
@@ -112,6 +120,7 @@ public class RecipeMatcher {
         return ingredientName;
     }
 
+    // Check whether units are identical or belong to the same measurement type.
     public static boolean compatibleUnits(String firstUnit, String secondUnit) {
 
         firstUnit = firstUnit.toLowerCase(Locale.ROOT);
@@ -130,6 +139,7 @@ public class RecipeMatcher {
                 (secondUnit.equals("ml") || secondUnit.equals("l"));
     }
 
+    // Convert kilograms to grams and liters to millilitres.
     public static double convertQuantity(double quantity, String unit) {
 
         unit = unit.toLowerCase(Locale.ROOT);

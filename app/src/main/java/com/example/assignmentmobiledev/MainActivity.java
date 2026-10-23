@@ -2,8 +2,8 @@ package com.example.assignmentmobiledev;
 
 import android.os.Bundle;
 
-
-import androidx.activity.EdgeToEdge;
+import android.view.View;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -11,24 +11,63 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.example.assignmentmobiledev.Seeder.RecipeSeeder;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        BottomNavigationView bottomNav =
-                findViewById(R.id.bottomNavigation);
+        // layout top bar padding
+       View root = findViewById(R.id.mainActivityRoot);
 
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            v.setPadding(
+                    v.getPaddingLeft(),
+                    bars.top,
+                    v.getPaddingRight(),
+                    v.getPaddingBottom()
+            );
+
+            return insets;
+        });
+
+        // firebase instance
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+
+        // user is signed in
+        if (auth.getCurrentUser() != null) {
+            initializeApp(savedInstanceState);
+        }
+
+        // sign in the user, then run the app
+        else {
+            auth.signInAnonymously()
+                    .addOnSuccessListener(result -> {
+                        initializeApp(savedInstanceState);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Authentication failed", Toast.LENGTH_LONG).show();
+                    });
+        }
+    }
+
+
+    private void initializeApp(Bundle savedInstanceState) {
+
+        // seeds recipes (if needed)
+        RecipeSeeder.seedRecipes();
+
+        // bottom navigation menu
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNavigation);
+
+        // fragment navigation on button press
         bottomNav.setOnItemSelectedListener(item -> {
 
             int id = item.getItemId();
@@ -56,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // fragment display helper
     private void showFragment(Fragment fragment) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.fragmentContainer, fragment);

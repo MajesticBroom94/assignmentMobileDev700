@@ -20,7 +20,6 @@ import com.example.assignmentmobiledev.Adapters.PantryAdapter;
 import com.example.assignmentmobiledev.Models.PantryItem;
 import com.example.assignmentmobiledev.Repositories.PantryRepository;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -47,18 +46,31 @@ public class PantryFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        RecyclerView recyclerView = view.findViewById(R.id.recyclerPantry);
+        // new ingredient button
+        Button addIngredientBtn = view.findViewById(R.id.btnAddIngredient);
 
+        // button opens create ingredient screen
+        addIngredientBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(requireContext(), AddEditIngredientActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        // recycler view linked to layout
+        RecyclerView recyclerView = view.findViewById(R.id.recyclerPantry);
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
+        // Handle edit and delete actions through the adapter listener
         adapter = new PantryAdapter(
                 new PantryAdapter.OnIngredientActionListener() {
+
+                    // opens edit ingredient screen
                     @Override
                     public void onEdit(PantryItem item) {
 
-                        Intent intent = new Intent(
-                                requireContext(), AddEditIngredientActivity.class
-                        );
+                        Intent intent = new Intent(requireContext(), AddEditIngredientActivity.class);
 
                         intent.putExtra("itemId", item.getId());
                         intent.putExtra("name", item.getName());
@@ -72,9 +84,11 @@ public class PantryFragment extends Fragment {
                         startActivity(intent);
                     }
 
+                    // deletes ingredient on confirmation
                     @Override
                     public void onDelete(PantryItem item) {
 
+                        // dialog to confirm delete
                         new MaterialAlertDialogBuilder(requireContext())
                                 .setTitle("Delete Ingredient")
                                 .setMessage("Are you sure you want to delete "
@@ -86,6 +100,7 @@ public class PantryFragment extends Fragment {
                                         return;
                                     }
 
+                                    // delete ingredient + result message
                                     repository.delete(item.getId())
                                             .addOnSuccessListener(unused ->
                                                     Toast.makeText(requireContext(),
@@ -103,35 +118,22 @@ public class PantryFragment extends Fragment {
                 }
         );
 
+        // set the adapter to the recycler view
         recyclerView.setAdapter(adapter);
 
-        // add ingredient button action
-        Button addIngredientBtn = view.findViewById(R.id.btnAddIngredient);
+        loadPantry();
+    }
 
-        addIngredientBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(requireContext(), AddEditIngredientActivity.class);
-                startActivity(intent);
-            }
-        });
+    @Override
+    public void onResume() {
+        super.onResume();
 
-        // Authenticate before loading pantry data
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-
-        if (auth.getCurrentUser() != null) {
-            loadPantry();
-        } else {
-            auth.signInAnonymously()
-                    .addOnSuccessListener(result -> loadPantry())
-                    .addOnFailureListener(e ->
-                            Toast.makeText(requireContext(),
-                                    "Authentication failed",
-                                    Toast.LENGTH_LONG).show()
-                    );
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
         }
     }
 
+    // Remove the Firestore listener when the fragment's view is destroyed
     @Override
     public void onDestroyView() {
         if (pantryListener != null) {
@@ -142,13 +144,15 @@ public class PantryFragment extends Fragment {
         super.onDestroyView();
     }
 
+    // Listen for pantry changes and update the displayed ingredients
     private void loadPantry() {
 
         repository = new PantryRepository();
 
         pantryListener = repository.listen(new EventListener<QuerySnapshot>() {
             @Override
-            public void onEvent(@Nullable QuerySnapshot snapshots, @Nullable FirebaseFirestoreException error) {
+            public void onEvent(@Nullable QuerySnapshot snapshots,
+                                @Nullable FirebaseFirestoreException error) {
                 if (error != null) {
                     Log.e("Pantry", "Error loading items", error);
                     return;

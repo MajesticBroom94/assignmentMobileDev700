@@ -46,8 +46,7 @@ public class RecipesFragment extends Fragment {
     }
 
     @Override
-    public void onViewCreated(@NonNull View view,
-                              @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         progressRecipes = view.findViewById(R.id.progressRecipes);
@@ -55,14 +54,16 @@ public class RecipesFragment extends Fragment {
         txtNoMatches = view.findViewById(R.id.txtNoMatches);
         txtNoAlmostThere = view.findViewById(R.id.txtNoAlmostThere);
 
+        // recycler views linked to layout
+        // two recycler views on fragment
         RecyclerView recyclerCanMake = view.findViewById(R.id.recyclerCanMake);
-
         RecyclerView recyclerAlmostThere = view.findViewById(R.id.recyclerAlmostThere);
 
         recyclerCanMake.setLayoutManager(new LinearLayoutManager(requireContext()));
-
         recyclerAlmostThere.setLayoutManager(new LinearLayoutManager(requireContext()));
 
+
+        // Handle click/select actions through the adapter listener
         canMakeAdapter = new RecipeAdapter(new RecipeAdapter.OnRecipeClickListener() {
             @Override
             public void onRecipeClick(Recipe recipe) {
@@ -77,6 +78,7 @@ public class RecipesFragment extends Fragment {
             }
         });
 
+        // set the adapters to the recycler views
         recyclerCanMake.setAdapter(canMakeAdapter);
         recyclerAlmostThere.setAdapter(almostThereAdapter);
     }
@@ -92,52 +94,45 @@ public class RecipesFragment extends Fragment {
     }
 
     private void loadRecipes() {
-
         progressRecipes.setVisibility(View.VISIBLE);
         layoutRecipeResults.setVisibility(View.GONE);
-
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-
-        if (auth.getCurrentUser() == null) {
-            auth.signInAnonymously()
-                    .addOnSuccessListener(result -> {
-                        if (getView() != null) {
-                            fetchRecipeData();
-                        }
-                    })
-                    .addOnFailureListener(e -> showError());
-        } else {
-            fetchRecipeData();
-        }
+        fetchRecipeData();
     }
+
 
     private void fetchRecipeData() {
 
         PantryRepository pantryRepository = new PantryRepository();
         RecipeRepository recipeRepository = new RecipeRepository();
 
+        // retrieve all pantry items
         pantryRepository.getAll()
                 .addOnSuccessListener(pantrySnapshot -> {
 
                     if (getView() == null) return;
 
+                    // store all pantry items
                     List<PantryItem> pantryItems = new ArrayList<>();
 
                     for (DocumentSnapshot document : pantrySnapshot.getDocuments()) {
 
+                        // convert document to pantry item
                         PantryItem item = document.toObject(PantryItem.class);
 
+                        // attach the document id to the item
                         if (item != null) {
                             item.setId(document.getId());
                             pantryItems.add(item);
                         }
                     }
 
+                    // retrieve all recipe items
                     recipeRepository.getAll()
                             .addOnSuccessListener(recipeSnapshot -> {
 
                                 if (getView() == null) return;
 
+                                // store all recipe items
                                 List<Recipe> recipes = new ArrayList<>();
 
                                 for (DocumentSnapshot document : recipeSnapshot.getDocuments()) {
@@ -150,13 +145,17 @@ public class RecipesFragment extends Fragment {
                                     }
                                 }
 
+                                // Recipe matcher will return two lists for recipes that:
+                                // 1 - Matched exactly
+                                // 2 - Has exactly one item missing to make recipe
                                 RecipeMatchResult result =
                                         RecipeMatcher.getMatchingRecipes(pantryItems, recipes);
 
+                                // Set the adapter data to inflate the recycler views
                                 canMakeAdapter.setRecipes(result.getCanMake());
-
                                 almostThereAdapter.setRecipes(result.getAlmostThere());
 
+                                // Set the visibility of the text views and progress bar
                                 txtNoMatches.setVisibility(
                                         result.getCanMake().isEmpty() ?
                                         View.VISIBLE : View.GONE
@@ -175,18 +174,16 @@ public class RecipesFragment extends Fragment {
                 .addOnFailureListener(e -> showError());
     }
 
+    // database error messages
     private void showError() {
         if (getView() == null) return;
 
         progressRecipes.setVisibility(View.GONE);
 
-        Toast.makeText(
-                requireContext(),
-                "Unable to load recipes",
-                Toast.LENGTH_LONG
-        ).show();
+        Toast.makeText(requireContext(), "Unable to load recipes", Toast.LENGTH_LONG).show();
     }
 
+    // intent to open recipe detail screen
     private void openRecipe(Recipe recipe, boolean canMake) {
 
         Intent intent = new Intent(requireContext(), RecipeDetailActivity.class);
